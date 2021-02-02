@@ -15,7 +15,7 @@ class RequestController
     public function testAction()
     {
         $t =1;
-        $y = 1;
+
         return new JsonResponse('test');
     }
 }
