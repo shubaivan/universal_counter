@@ -1,18 +1,39 @@
 doctrine:
-    dbal:
-        url: '%env(resolve:DATABASE_URL)%'
+  dbal:
+    default_connection: default
+    types:
+      uuid: Symfony\Bridge\Doctrine\Types\UuidType
+    connections:
+      default:
 
-        # IMPORTANT: You MUST configure your server version,
-        # either here or in the DATABASE_URL env var (see .env file)
-        #server_version: '13'
-    orm:
-        auto_generate_proxy_classes: true
+        driver_class: App\Doctrine\Driver\PDOPgSqlDriver
+
+        host:     '%env(resolve:PG_HOST)%'
+        port:     '%env(resolve:PG_PORT)%'
+        dbname:   '%env(resolve:PG_DB_NAME)%'
+        user:     '%env(resolve:PG_USER)%'
+        password: '%env(resolve:PG_PSW)%'
+
+        #                driver: 'my_pdo_pgsql'
+        server_version: '11.9'
+        charset: utf8
+
+        default_table_options:
+          charset: utf8
+          collate: utf8_unicode_ci
+
+  orm:
+    default_entity_manager: default
+    auto_generate_proxy_classes: true
+    entity_managers:
+      default:
+        connection: default
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
         auto_mapping: true
         mappings:
-            App:
-                is_bundle: false
-                type: annotation
-                dir: '%kernel.project_dir%/src/Entity'
-                prefix: 'App\Entity'
-                alias: App
+          App:
+            is_bundle: false
+            type: annotation
+            dir: '%kernel.project_dir%/src/Entity'
+            prefix: 'App\Entity'
+            alias: App
