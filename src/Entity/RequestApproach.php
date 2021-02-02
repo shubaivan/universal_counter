@@ -2,37 +2,55 @@
 
 namespace App\Entity;
 
+use App\Exception\EntityValidatorException;
 use App\Repository\RequestApproachRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Gedmo\Timestampable\Traits\TimestampableEntity;
+use JMS\Serializer\Annotation;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * @ORM\Entity(repositoryClass=RequestApproachRepository::class)
  */
-class RequestApproach
+class RequestApproach implements EntityValidatorException
 {
+    const SERIALIZED_GROUP_GET_ONE = 'get_request_approach_by_id';
+
     use TimestampableEntity;
 
     /**
      * @ORM\Id
      * @ORM\GeneratedValue
      * @ORM\Column(type="integer")
+     * @Annotation\Groups({
+     *     RequestApproach::SERIALIZED_GROUP_GET_ONE
+     * })
      */
     private $id;
 
     /**
+     * @Assert\NotBlank()
      * @ORM\Column(type="string", length=255)
+     * @Annotation\Groups({
+     *     RequestApproach::SERIALIZED_GROUP_GET_ONE
+     * })
      */
     private $ipAddress;
 
     /**
      * @var UniqueIdentifiers
      *
+     * @Assert\NotBlank()
+     * @Assert\Valid()
      * @ORM\OneToOne(targetEntity="UniqueIdentifiers",
      *     inversedBy="request",
-     *     orphanRemoval=true
+     *     orphanRemoval=true,
+     *     cascade={"persist", "remove"}
      *     )
      * @ORM\JoinColumn(onDelete="CASCADE")
+     * @Annotation\Groups({
+     *     RequestApproach::SERIALIZED_GROUP_GET_ONE
+     * })
      */
     private $uniqueIdentifiers;
 
@@ -73,5 +91,10 @@ class RequestApproach
         $this->uniqueIdentifiers = $uniqueIdentifiers;
 
         return $this;
+    }
+
+    public function getIdentity()
+    {
+        return $this->id;
     }
 }

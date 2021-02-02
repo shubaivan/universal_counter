@@ -9,6 +9,9 @@ use Doctrine\ORM\Mapping as ORM;
 use Gedmo\Timestampable\Traits\TimestampableEntity;
 use Doctrine\ORM\Mapping\UniqueConstraint;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use JMS\Serializer\Annotation;
+use Symfony\Component\Uid\Uuid;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * @ORM\Entity(repositoryClass=UniqueIdentifiersRepository::class)
@@ -27,17 +30,28 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
  */
 class UniqueIdentifiers
 {
+    const SERIALIZED_GROUP_GET_ONE = 'get_unique_identifiers_by_id';
+
     use TimestampableEntity;
 
     /**
      * @ORM\Id
      * @ORM\GeneratedValue
      * @ORM\Column(type="integer")
+     * @Annotation\Groups({
+     *     RequestApproach::SERIALIZED_GROUP_GET_ONE
+     * })
      */
     private $id;
 
     /**
      * @ORM\Column(type="uuid")
+     *
+     * @Assert\NotBlank()
+     * @Annotation\Groups({
+     *     RequestApproach::SERIALIZED_GROUP_GET_ONE
+     * })
+     * @Annotation\Type("string")
      */
     private $requestHash;
 
@@ -46,7 +60,6 @@ class UniqueIdentifiers
      *
      * @ORM\OneToOne(targetEntity="RequestApproach",
      *      mappedBy="uniqueIdentifiers",
-     *      cascade={"persist", "remove"},
      *      orphanRemoval=true
      * )
      */
@@ -67,6 +80,7 @@ class UniqueIdentifiers
     public function __construct()
     {
         $this->chainData = new ArrayCollection();
+        $this->setRequestHash();
     }
 
     public function getId(): ?int
@@ -79,9 +93,9 @@ class UniqueIdentifiers
         return $this->requestHash;
     }
 
-    public function setRequestHash($requestHash): self
+    public function setRequestHash(?string $requestHash = null): self
     {
-        $this->requestHash = $requestHash;
+        $this->requestHash = $requestHash ?? Uuid::v4();
 
         return $this;
     }
