@@ -17,6 +17,11 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
  *        @UniqueConstraint(
  *          name="left_right_uniq_idx",
  *          columns={"right_id", "left_id"}
+ *     ),
+ *     @ORM\UniqueConstraint(
+ *          name="carriage_uniq_index",
+ *          columns={"unique_identifiers_id", "carriage"},
+ *          options={"where": "(carriage != 'f')"}
  *     )
  *    }
  * )
