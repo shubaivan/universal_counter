@@ -75,8 +75,9 @@ class ChainConfiguration implements EntityValidatorException
      *
      * @ORM\Column(type="integer", nullable=false, options={"default":1})
      * @Annotation\Groups({
-     *     ChainConfiguration::SERIALIZED_GROUP_POST, ChainConfiguration::SERIALIZED_GROUP_GET_ONE
+     *     ChainConfiguration::SERIALIZED_GROUP_POST
      * })
+     * @Annotation\Accessor(setter="setDirectionAccessor")
      * @SWG\Property(description="chain direction up or down.", default="up(1)")
      * @Assert\NotBlank(groups={ChainConfiguration::SERIALIZED_GROUP_POST})
      * @Assert\NotEqualTo(value="0", groups={ChainConfiguration::SERIALIZED_GROUP_POST})
@@ -88,8 +89,7 @@ class ChainConfiguration implements EntityValidatorException
      *
      * @ORM\OneToOne(
      *     targetEntity="UniqueIdentifiers",
-     *     mappedBy="chainConfiguration",
-     *     orphanRemoval=true
+     *     mappedBy="chainConfiguration"
      *     )
      * @Assert\NotBlank(groups={ChainConfiguration::VALID_GROUP_UNIQ_IDENTITY})
      */
@@ -136,12 +136,12 @@ class ChainConfiguration implements EntityValidatorException
         return $this;
     }
 
-    public function getDirection(): ?int
+    public function getDirection(): ?string
     {
-        if (!array_key_exists($this->direction, self::$enumDirection)) {
+        if (!array_search($this->direction, self::$enumDirection, true)) {
             throw new BadRequestHttpException('available enum' . implode(',', self::$enumDirection));
         }
-        return self::$enumDirection[$this->direction];
+        return array_search($this->direction, self::$enumDirection, true);
     }
 
     public function setDirection(int $direction): self
@@ -183,5 +183,23 @@ class ChainConfiguration implements EntityValidatorException
     public function getIdentity()
     {
         return $this->getId();
+    }
+
+    /**
+     * @return string|null
+     *
+     * @Annotation\VirtualProperty()
+     * @Annotation\SerializedName("directionType")
+     * @Annotation\Groups({ChainConfiguration::SERIALIZED_GROUP_GET_ONE})
+     * @Annotation\Type("string")
+     */
+    public function getDirectionValue()
+    {
+        return $this->getDirection();
+    }
+
+    public function setDirectionAccessor($directioin)
+    {
+        return $this->setDirection($directioin);
     }
 }

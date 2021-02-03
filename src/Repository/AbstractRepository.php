@@ -20,4 +20,9 @@ abstract class AbstractRepository extends ServiceEntityRepository
         $this->getEntityManager()->persist($entity);
         $this->getEntityManager()->flush();
     }
+
+    public function removeEntity($entity)
+    {
+        $this->getEntityManager()->remove($entity);
+    }
 }

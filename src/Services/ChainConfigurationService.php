@@ -44,6 +44,10 @@ class ChainConfigurationService
         UniqueIdentifiers $uniqueIdentifiers
     )
     {
+        if ($uniqueIdentifiers->getChainConfiguration()) {
+            $this->chainConfigurationRepository
+                ->removeEntity($uniqueIdentifiers->getChainConfiguration());
+        }
         $chainConfiguration->setUniqueIdentifier($uniqueIdentifiers);
         $this->chainConfigurationRepository->save($chainConfiguration);
     }
