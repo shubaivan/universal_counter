@@ -46,16 +46,17 @@ class RequestApproachService
     {
         $requestApproach = new RequestApproach();
         $requestApproach
-            ->setIpAddress($ip);
-
-        $uniqueIdentifiers = new UniqueIdentifiers();
-
-        $requestApproach->setUniqueIdentifiers($uniqueIdentifiers);
+            ->setIpAddress($ip)
+            ->setUniqueIdentifiers((new UniqueIdentifiers()));
 
         $this->objectsHandler->validateEntity($requestApproach);
-
         $this->requestApproachRepository->save($requestApproach);
 
         return $requestApproach;
+    }
+
+    public function getAll()
+    {
+        return $this->requestApproachRepository->findAll();
     }
 }

@@ -1,14 +1,12 @@
 <?php
 
-
 namespace App\Controller\Rest;
 
-
+use App\Entity\Brand;
 use App\Exception\ValidatorException;
 use App\Services\RequestApproachService;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
-use FOS\RestBundle\Controller\AbstractFOSRestController;
 use FOS\RestBundle\Controller\Annotations as Rest;
 use FOS\RestBundle\Controller\Annotations\View;
 use Nelmio\ApiDocBundle\Annotation\Model;

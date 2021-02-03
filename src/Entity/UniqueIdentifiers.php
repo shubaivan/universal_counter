@@ -66,6 +66,17 @@ class UniqueIdentifiers
     private $request;
 
     /**
+     * @var ChainConfiguration
+     *
+     * @ORM\OneToOne(targetEntity="ChainConfiguration",
+     *      inversedBy="uniqueIdentifier",
+     *      cascade={"remove"},
+     *      orphanRemoval=true
+     * )
+     */
+    private $chainConfiguration;
+
+    /**
      * @var ArrayCollection|ChainData[]
      *
      * @ORM\OneToMany(
@@ -138,6 +149,18 @@ class UniqueIdentifiers
                 $chainData->setUniqueIdentifiers(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getChainConfiguration(): ?ChainConfiguration
+    {
+        return $this->chainConfiguration;
+    }
+
+    public function setChainConfiguration(?ChainConfiguration $chainConfiguration): self
+    {
+        $this->chainConfiguration = $chainConfiguration;
 
         return $this;
     }
