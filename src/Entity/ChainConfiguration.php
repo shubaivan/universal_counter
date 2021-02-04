@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use JMS\Serializer\Annotation;
 use Symfony\Component\Validator\Constraints as Assert;
-use Swagger\Annotations as SWG;
+use OpenApi\Annotations as SWG;
 
 
 /**
@@ -28,6 +28,14 @@ class ChainConfiguration implements EntityValidatorException
         self::DIRECTION_DOWN => 0,
         self::DIRECTION_UP => 1,
     ];
+
+    /**
+     * @return array
+     */
+    public static function getEnumDirection(): array
+    {
+        return self::$enumDirection;
+    }
 
     /**
      * @ORM\Id
@@ -139,7 +147,7 @@ class ChainConfiguration implements EntityValidatorException
     public function getDirection(): ?string
     {
         if (!array_search($this->direction, self::$enumDirection, true)) {
-            throw new BadRequestHttpException('available enum' . implode(',', self::$enumDirection));
+            throw new BadRequestHttpException('unexpected value, available enum - ' . implode(',', self::$enumDirection));
         }
         return array_search($this->direction, self::$enumDirection, true);
     }
@@ -147,7 +155,7 @@ class ChainConfiguration implements EntityValidatorException
     public function setDirection(int $direction): self
     {
         if (array_search($direction, self::$enumDirection, true) === false) {
-            throw new BadRequestHttpException('available enum' . implode(',', self::$enumDirection));
+            throw new BadRequestHttpException('unexpected value, available enum - ' . implode(',', self::$enumDirection));
         }
 
         $this->direction = $direction;

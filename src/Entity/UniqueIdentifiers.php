@@ -136,8 +136,8 @@ class UniqueIdentifiers
 
     public function addChainData(ChainData $chainData): self
     {
-        if (!$this->chainData->contains($chainData)) {
-            $this->chainData[] = $chainData;
+        if (!$this->getChainData()->contains($chainData)) {
+            $this->getChainData()->add($chainData);
             $chainData->setUniqueIdentifiers($this);
         }
 

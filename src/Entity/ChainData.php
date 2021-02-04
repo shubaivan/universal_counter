@@ -10,8 +10,9 @@ use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\Mapping\UniqueConstraint;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use JMS\Serializer\Annotation;
+use Symfony\Component\HttpFoundation\Exception\BadRequestException;
 use Symfony\Component\Validator\Constraints as Assert;
-use Swagger\Annotations as SWG;
+use OpenApi\Annotations as SWG;
 
 /**
  * @ORM\Entity(repositoryClass=ChainDataRepository::class)
@@ -20,8 +21,11 @@ use Swagger\Annotations as SWG;
  *    uniqueConstraints={
  *        @UniqueConstraint(
  *          name="left_right_uniq_idx",
- *          columns={"right_id", "left_id"}
+ *          columns={"right_id", "left_id", "unique_identifiers_id"}
  *     ),
+ *     @UniqueConstraint(
+ *          name="brand_slug_idx",
+ *          columns={"unique_identifiers_id", "chain_data_name"}),
  *     @ORM\UniqueConstraint(
  *          name="carriage_uniq_index",
  *          columns={"unique_identifiers_id", "carriage"},
@@ -30,8 +34,8 @@ use Swagger\Annotations as SWG;
  *    }
  * )
  * @ORM\HasLifecycleCallbacks()
- * @UniqueEntity(fields={"right", "left"})
- * @UniqueEntity(fields={"chainDataName"})
+ * @UniqueEntity(fields={"right", "left", "uniqueIdentifiers"}, groups={ChainData::SERIALIZED_GROUP_POST})
+ * @UniqueEntity(fields={"chainDataName", "uniqueIdentifiers"}, groups={ChainData::SERIALIZED_GROUP_POST})
  * @ChainDataConstraint(groups={ChainData::VALIDATION_GROUP_RELATION})
  */
 class ChainData implements EntityValidatorException
@@ -66,7 +70,7 @@ class ChainData implements EntityValidatorException
      * @Annotation\Groups({
      *     ChainData::SERIALIZED_GROUP_POST, ChainData::SERIALIZED_GROUP_GET_ONE
      * })
-     * @Assert\NotBlank(groups={ChainData::SERIALIZED_GROUP_POST})
+     * @Assert\NotNull(groups={ChainData::SERIALIZED_GROUP_POST})
      * @SWG\Property(description="carriage position for current element.")
      */
     private $carriage = false;
@@ -170,6 +174,41 @@ class ChainData implements EntityValidatorException
         }
 
         return $this;
+    }
+
+    /**
+     * @return $this|null
+     */
+    public function move()
+    {
+        $this->setCarriage(false);
+        $chainConfiguration = $this->getUniqueIdentifiers()->getChainConfiguration();
+        if ($chainConfiguration) {
+            $model = null;
+            switch ($chainConfiguration->getDirection()) {
+                case ChainConfiguration::DIRECTION_UP:
+                    if (!$this->getRight()) {
+                        throw new BadRequestException('in this direction ' . ChainConfiguration::DIRECTION_UP
+                            . ' item was ended');
+                    }
+                    $this->getRight()->setCarriage(true);
+                    $this->setCarriage(false);
+                    $model = $this->getRight();
+                    break;
+                case ChainConfiguration::DIRECTION_DOWN:
+                    if (!$this->getLeft()) {
+                        throw new BadRequestException('in this direction ' . ChainConfiguration::DIRECTION_DOWN
+                            . ' item was ended');
+                    }
+                    $this->getLeft()->setCarriage(true);
+                    $this->setCarriage(false);
+                    $model = $this->getLeft();
+                    break;
+                default:
+                    break;
+            }
+            return $model;
+        }
     }
 
     /**

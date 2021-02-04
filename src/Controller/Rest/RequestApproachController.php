@@ -2,7 +2,6 @@
 
 namespace App\Controller\Rest;
 
-use App\Entity\Brand;
 use App\Exception\ValidatorException;
 use App\Services\RequestApproachService;
 use Doctrine\ORM\OptimisticLockException;
@@ -12,7 +11,7 @@ use FOS\RestBundle\Controller\Annotations\View;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Swagger\Annotations as SWG;
+use OpenApi\Annotations as SWG;
 use App\Entity\RequestApproach;
 use App\Entity\UniqueIdentifiers;
 

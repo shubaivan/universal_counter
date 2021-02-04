@@ -3,6 +3,7 @@
 
 namespace App\Services;
 
+use App\Entity\ChainConfiguration;
 use App\Entity\ChainData;
 use App\Entity\UniqueIdentifiers;
 use App\Exception\ValidatorException;
@@ -12,6 +13,10 @@ use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
 use Exception;
+use League\Csv\Reader;
+use Symfony\Component\HttpFoundation\Exception\BadRequestException;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 class ChainDataService
 {
@@ -49,21 +54,19 @@ class ChainDataService
     /**
      * @param UniqueIdentifiers $uniqueIdentifiers
      * @return ChainData
-     * @throws ValidatorException
      * @throws NonUniqueResultException
-     * @throws ORMException
-     * @throws OptimisticLockException
+     * @throws Exception
      */
     public function getNextDataFromChain(UniqueIdentifiers $uniqueIdentifiers)
     {
         if ($this->shouldBeCreateNewChainElement($uniqueIdentifiers)) {
             return $this->createNewElementByConf($uniqueIdentifiers);
         }
-    }
+        $chainData = $this->getCurrentDataFromChain($uniqueIdentifiers);
+        $current = $chainData->move();
+        $this->entityManager->flush();
 
-    public function getPreviousDataFromChain()
-    {
-
+        return $current;
     }
 
     /**
@@ -74,6 +77,47 @@ class ChainDataService
     public function getCurrentDataFromChain(UniqueIdentifiers $uniqueIdentifiers)
     {
         return $this->chainDataRepository->getCarriageElementByIdentity($uniqueIdentifiers);
+    }
+
+    /**
+     * @param UniqueIdentifiers $uniqueIdentifiers
+     * @param UploadedFile $file
+     * @throws NonUniqueResultException
+     * @throws ValidatorException
+     * @throws \League\Csv\Exception
+     */
+    public function applyCustomChainFromFile(
+        UniqueIdentifiers $uniqueIdentifiers,
+        UploadedFile $file,
+        int $direction
+    )
+    {
+        $realPath = $file->getRealPath();
+        $csv = Reader::createFromPath($realPath, 'r');
+        $csv->setHeaderOffset(0);
+        $csv->setDelimiter(',');
+        $csv->setEscape('"');
+        $csv->setEnclosure('\'');
+        $fixCurrentCond = false;
+        foreach ($csv as $record) {
+            $currentCondition = ($record['Current'] && ($record['Current'] == 'true' || $record['Current'] == '1'))
+                ? true : false;
+            !$fixCurrentCond ? ($fixCurrentCond = $currentCondition) : null;
+            $chainData = $this->preCreateNewElement(
+                $uniqueIdentifiers,
+                [
+                    'chainDataName' => $record['Name'],
+                    'carriage' => $currentCondition,
+                ],
+                $direction
+            );
+            $this->entityManager->persist($chainData);
+        }
+        $checkCurrentInDB = $this->getCurrentDataFromChain($uniqueIdentifiers);
+        if ((!$fixCurrentCond && !$checkCurrentInDB) || ($fixCurrentCond && $checkCurrentInDB)) {
+            throw new BadRequestException('could be only one current element');
+        }
+        $this->entityManager->flush();
     }
 
     /**
@@ -97,7 +141,8 @@ class ChainDataService
     private function shouldBeCreateNewChainElement(UniqueIdentifiers $uniqueIdentifiers)
     {
         return ($this->lastElementIsCurrent($uniqueIdentifiers)
-                || !$uniqueIdentifiers->getChainData()->count()) && $uniqueIdentifiers->getChainConfiguration();
+                || !$uniqueIdentifiers->getChainData()->count()
+            ) && $uniqueIdentifiers->getChainConfiguration();
     }
 
     /**
@@ -113,30 +158,71 @@ class ChainDataService
                 $this->updateCarriageChainData($uniqueIdentifiers);
                 $this->entityManager->flush();
             }
-            /** @var ChainData $handleObject */
-            $handleObject = $this->objectsHandler
-                ->handleObject(
-                    [
-                        'chainDataName' => $this->generateChainDataName($uniqueIdentifiers),
-                        'carriage' => true,
-                    ],
-                    ChainData::class,
-                    [ChainData::SERIALIZED_GROUP_POST]
-                );
-            $handleObject->setUniqueIdentifiers($uniqueIdentifiers);
-            if ($uniqueIdentifiers->getChainData()->last()) {
-                $handleObject->setLeft($uniqueIdentifiers->getChainData()->last());
-            }
-            $this->objectsHandler->validateEntity($handleObject, [ChainData::VALIDATION_GROUP_RELATION]);
-
-            $this->chainDataRepository->save($handleObject);
+            $chainData = $this->preCreateNewElement($uniqueIdentifiers);
+            $this->chainDataRepository->save($chainData);
             $this->entityManager->commit();
         } catch (Exception $exception) {
             $this->entityManager->rollback();
             throw $exception;
         }
 
+        return $chainData;
+    }
+
+    /**
+     * @param UniqueIdentifiers $uniqueIdentifiers
+     * @param array $dataProperties
+     * @return ChainData
+     * @throws ValidatorException
+     */
+    private function preCreateNewElement(
+        UniqueIdentifiers $uniqueIdentifiers,
+        array $dataProperties = [],
+        ?int $direction = null
+    )
+    {
+        !is_null($direction) ?: $direction = ChainConfiguration::getEnumDirection()[ChainConfiguration::DIRECTION_UP];
+        /** @var ChainData $handleObject */
+        $handleObject = $this->objectsHandler
+            ->handleObject(($dataProperties ??
+                [
+                    'chainDataName' => $this->generateChainDataName($uniqueIdentifiers),
+                    'carriage' => true,
+                ]),
+                ChainData::class,
+                [ChainData::SERIALIZED_GROUP_POST]
+            );
+        $this->executeDirection($direction, $uniqueIdentifiers, $handleObject);
+        $this->objectsHandler->validateEntity($handleObject, [ChainData::VALIDATION_GROUP_RELATION]);
+
         return $handleObject;
+    }
+
+    private function executeDirection(
+        int $direction,
+        UniqueIdentifiers $uniqueIdentifiers,
+        ChainData $chainData
+    )
+    {
+        switch ($direction) {
+            case ChainConfiguration::getEnumDirection()[ChainConfiguration::DIRECTION_UP]:
+                $last = $uniqueIdentifiers->getChainData()->last();
+                $uniqueIdentifiers->addChainData($chainData);
+                if ($last) {
+                    $chainData->setLeft($last);
+                }
+                break;
+            case ChainConfiguration::getEnumDirection()[ChainConfiguration::DIRECTION_DOWN]:
+                $first = $uniqueIdentifiers->getChainData()->first();
+                $uniqueIdentifiers->addChainData($chainData);
+                if ($first) {
+                    $chainData->setRight($first);
+                }
+                break;
+            default:
+                throw new BadRequestHttpException('unexpected value, available enum - '
+                    . implode(',', ChainConfiguration::getEnumDirection()));
+        }
     }
 
     /**

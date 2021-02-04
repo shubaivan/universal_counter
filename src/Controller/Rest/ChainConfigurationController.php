@@ -16,7 +16,7 @@ use Nelmio\ApiDocBundle\Annotation\Model;
 use Nelmio\ApiDocBundle\Annotation\Operation;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Component\HttpFoundation\Response;
-use Swagger\Annotations as SWG;
+use OpenApi\Annotations as SWG;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 
 
@@ -58,9 +58,9 @@ class ChainConfigurationController extends AbstractRestController
      * @Operation(
      *     tags={"ChainConfiguration"},
      *     summary="post ChainConfiguration",
-     *     @SWG\Parameter(
-     *         name="body",
-     *         in="body",
+     *     @SWG\RequestBody(
+     *         request="body",
+     *         description="chain data params",
      *         required=true,
      *         @Model(
      *              type=ChainConfiguration::class,

@@ -32,11 +32,11 @@ class ChainDataConstraintValidator extends ConstraintValidator
 
         if ($entity->getUniqueIdentifiers()
             && $entity->getUniqueIdentifiers()->getChainData()->count() > 1
-            && !$entity->getLeft()
+            && (!$entity->getLeft() && !$entity->getRight())
         ) {
             $this->context->buildViolation($constraint->message)
-                ->setParameter('{{ args }}', 'left')
-                ->atPath('left')
+                ->setParameter('{{ args }}', 'left|right')
+                ->atPath('left|right')
                 ->addViolation();
         }
     }

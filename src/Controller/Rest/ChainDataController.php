@@ -3,16 +3,20 @@
 
 namespace App\Controller\Rest;
 
+use App\Entity\ChainConfiguration;
 use App\Entity\ChainData;
 use App\Entity\UniqueIdentifiers;
+use App\Exception\ValidatorException;
 use App\Services\ChainDataService;
+use Doctrine\ORM\NonUniqueResultException;
 use Exception;
 use FOS\RestBundle\Controller\Annotations as Rest;
+use FOS\RestBundle\Request\ParamFetcher;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use Nelmio\ApiDocBundle\Annotation\Operation;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Symfony\Component\HttpFoundation\Response;
-use Swagger\Annotations as SWG;
+use OpenApi\Annotations as OA;
 
 class ChainDataController extends AbstractRestController
 {
@@ -40,7 +44,7 @@ class ChainDataController extends AbstractRestController
      * @Operation(
      *     tags={"ChainData"},
      *     summary="get chain data by uniq identifier.",
-     *     @SWG\Response(
+     *     @OA\Response(
      *         response=200,
      *         description="Json object ChainData",
      *         @Model(
@@ -61,5 +65,70 @@ class ChainDataController extends AbstractRestController
     )
     {
         return $this->chainDataService->getNextDataFromChain($uniqueIdentifiers);
+    }
+
+    /**
+     * post ChainConfiguration.
+     *
+     * @Rest\Post("/api/upload-file/{uuid}")
+     *
+     * @Rest\View(serializerGroups={ChainConfiguration::SERIALIZED_GROUP_GET_ONE},
+     *      statusCode=Response::HTTP_OK
+     *     )
+     *
+     * @OA\RequestBody(
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 allOf={
+     *                     @OA\Schema(
+     *                         @OA\Property(
+     *                             description="should be csv file",
+     *                             property="csv_file",
+     *                             type="string", format="binary"
+     *                         )
+     *                     )
+     *                 }
+     *             )
+     *         )
+     * )
+     *
+     * @OA\Parameter(
+     *         description="direction - append or prepend",
+     *         in="query",
+     *         name="direction",
+     *         required=true,
+     *         @OA\Schema(
+     *           type="integer",
+     *           format="int64",
+     *           default="0"
+     *         )
+     *     )
+     *
+     * @ParamConverter("uniqueIdentifiers", options={"mapping": {"uuid": "requestHash"}})
+     * @Rest\QueryParam(name="direction", default="0", description="direction - append or prepend", requirements="\d+")
+     * @Rest\FileParam(name="csv_file", requirements={"mimeTypes"={"text/csv","text/plain"}}, nullable=false)
+     *
+     * @param ParamFetcher $paramFetcher
+     * @param UniqueIdentifiers $uniqueIdentifiers
+     *
+     * @return array
+     *
+     * @throws NonUniqueResultException
+     * @throws ValidatorException
+     * @throws \League\Csv\Exception
+     */
+    public function postFileAction(
+        ParamFetcher $paramFetcher,
+        UniqueIdentifiers $uniqueIdentifiers
+    )
+    {
+        $this->chainDataService->applyCustomChainFromFile(
+            $uniqueIdentifiers,
+            $paramFetcher->get('csv_file'),
+            $paramFetcher->get('direction')
+        );
+
+        return ['data' => 'success'];
     }
 }
