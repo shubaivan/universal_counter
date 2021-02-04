@@ -2,12 +2,16 @@
 
 namespace App\Entity;
 
+use App\Exception\EntityValidatorException;
 use App\Repository\ChainDataRepository;
+use App\Validation\Constraints\ChainDataConstraint;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\Mapping\UniqueConstraint;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
-
+use JMS\Serializer\Annotation;
+use Symfony\Component\Validator\Constraints as Assert;
+use Swagger\Annotations as SWG;
 
 /**
  * @ORM\Entity(repositoryClass=ChainDataRepository::class)
@@ -27,25 +31,43 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
  * )
  * @ORM\HasLifecycleCallbacks()
  * @UniqueEntity(fields={"right", "left"})
+ * @UniqueEntity(fields={"chainDataName"})
+ * @ChainDataConstraint(groups={ChainData::VALIDATION_GROUP_RELATION})
  */
-class ChainData
+class ChainData implements EntityValidatorException
 {
+    const SERIALIZED_GROUP_GET_ONE = 'get_chain_data_by_id';
+    const SERIALIZED_GROUP_POST = 'post_chain_data';
+    const VALIDATION_GROUP_RELATION = 'validate_chain_data_relation';
     /**
      * @ORM\Id
      * @ORM\GeneratedValue
      * @ORM\Column(type="integer")
+     * @Annotation\Groups({
+     *     ChainData::SERIALIZED_GROUP_GET_ONE
+     * })
      */
     private $id;
 
     /**
-     * @ORM\Column(type="string", length=255)
+     * @ORM\Column(type="string", length=255, nullable=false, unique=true)
+     * @Annotation\Groups({
+     *     ChainData::SERIALIZED_GROUP_POST, ChainData::SERIALIZED_GROUP_GET_ONE
+     * })
+     * @Assert\NotBlank(groups={ChainData::SERIALIZED_GROUP_POST})
+     * @SWG\Property(description="chain data name for current elemnt.")
      */
     private $chainDataName;
 
     /**
      * @var bool
      *
-     * @ORM\Column(type="boolean", nullable=true, options={"default": "0"})
+     * @ORM\Column(type="boolean", nullable=false, options={"default": "0"})
+     * @Annotation\Groups({
+     *     ChainData::SERIALIZED_GROUP_POST, ChainData::SERIALIZED_GROUP_GET_ONE
+     * })
+     * @Assert\NotBlank(groups={ChainData::SERIALIZED_GROUP_POST})
+     * @SWG\Property(description="carriage position for current element.")
      */
     private $carriage = false;
 
@@ -64,7 +86,8 @@ class ChainData
      *      cascade={"persist"},
      *      orphanRemoval=true
      * )
-     * @ORM\JoinColumn(referencedColumnName="id", nullable=false)
+     * @ORM\JoinColumn(referencedColumnName="id", nullable=true)
+     * @SWG\Property(description="element by left side for current element.")
      */
     private $left;
 
@@ -76,6 +99,7 @@ class ChainData
      *      orphanRemoval=true
      * )
      * @ORM\JoinColumn(referencedColumnName="id")
+     * @SWG\Property(description="element by right side for current element.")
      */
     private $right;
 
@@ -141,8 +165,18 @@ class ChainData
     public function setRight(?self $right): self
     {
         $this->right = $right;
-        $right->setLeft($this);
+        if ($right->getLeft() !== $this) {
+            $right->setLeft($this);
+        }
 
         return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getIdentity()
+    {
+        return $this->id;
     }
 }

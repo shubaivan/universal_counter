@@ -128,6 +128,9 @@ class UniqueIdentifiers
      */
     public function getChainData(): Collection
     {
+        if (!$this->chainData) {
+            $this->chainData = new ArrayCollection();
+        }
         return $this->chainData;
     }
 
