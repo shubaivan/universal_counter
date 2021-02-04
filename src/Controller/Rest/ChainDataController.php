@@ -8,7 +8,8 @@ use App\Entity\ChainData;
 use App\Entity\UniqueIdentifiers;
 use App\Exception\ValidatorException;
 use App\Services\ChainDataService;
-use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\OptimisticLockException;
+use Doctrine\ORM\ORMException;
 use Exception;
 use FOS\RestBundle\Controller\Annotations as Rest;
 use FOS\RestBundle\Request\ParamFetcher;
@@ -114,7 +115,8 @@ class ChainDataController extends AbstractRestController
      *
      * @return array
      *
-     * @throws NonUniqueResultException
+     * @throws ORMException
+     * @throws OptimisticLockException
      * @throws ValidatorException
      * @throws \League\Csv\Exception
      */

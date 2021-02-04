@@ -82,7 +82,9 @@ class ChainDataService
     /**
      * @param UniqueIdentifiers $uniqueIdentifiers
      * @param UploadedFile $file
-     * @throws NonUniqueResultException
+     * @param int $direction
+     * @throws ORMException
+     * @throws OptimisticLockException
      * @throws ValidatorException
      * @throws \League\Csv\Exception
      */
@@ -98,11 +100,12 @@ class ChainDataService
         $csv->setDelimiter(',');
         $csv->setEscape('"');
         $csv->setEnclosure('\'');
-        $fixCurrentCond = false;
+
         foreach ($csv as $record) {
-            $currentCondition = ($record['Current'] && ($record['Current'] == 'true' || $record['Current'] == '1'))
+            $currentCondition = ($record['Current'] && ($record['Current'] == 'true'
+                    || $record['Current'] == '1'))
                 ? true : false;
-            !$fixCurrentCond ? ($fixCurrentCond = $currentCondition) : null;
+
             $chainData = $this->preCreateNewElement(
                 $uniqueIdentifiers,
                 [
@@ -111,13 +114,11 @@ class ChainDataService
                 ],
                 $direction
             );
-            $this->entityManager->persist($chainData);
+            if ($currentCondition && $this->getCurrentDataFromChain($uniqueIdentifiers)) {
+                throw new BadRequestException('could be only one current element');
+            }
+            $this->chainDataRepository->save($chainData);
         }
-        $checkCurrentInDB = $this->getCurrentDataFromChain($uniqueIdentifiers);
-        if ((!$fixCurrentCond && !$checkCurrentInDB) || ($fixCurrentCond && $checkCurrentInDB)) {
-            throw new BadRequestException('could be only one current element');
-        }
-        $this->entityManager->flush();
     }
 
     /**
@@ -198,6 +199,12 @@ class ChainDataService
         return $handleObject;
     }
 
+    /**
+     * @param int $direction
+     * @param UniqueIdentifiers $uniqueIdentifiers
+     * @param ChainData $chainData
+     * @throws NonUniqueResultException
+     */
     private function executeDirection(
         int $direction,
         UniqueIdentifiers $uniqueIdentifiers,
@@ -206,14 +213,14 @@ class ChainDataService
     {
         switch ($direction) {
             case ChainConfiguration::getEnumDirection()[ChainConfiguration::DIRECTION_UP]:
-                $last = $uniqueIdentifiers->getChainData()->last();
+                $last = $this->chainDataRepository->getLastElementByIdentity($uniqueIdentifiers);
                 $uniqueIdentifiers->addChainData($chainData);
                 if ($last) {
                     $chainData->setLeft($last);
                 }
                 break;
             case ChainConfiguration::getEnumDirection()[ChainConfiguration::DIRECTION_DOWN]:
-                $first = $uniqueIdentifiers->getChainData()->first();
+                $first = $this->chainDataRepository->getFirstElementByIdentity($uniqueIdentifiers);
                 $uniqueIdentifiers->addChainData($chainData);
                 if ($first) {
                     $chainData->setRight($first);

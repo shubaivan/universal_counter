@@ -53,8 +53,27 @@ class ChainDataRepository extends AbstractRepository
             ->setParameters([
                 'uniqueIdentifiers' => $uniqueIdentifiers,
             ])
-            ->orderBy('alias_chain_data.id', Criteria::DESC)
-            ->setMaxResults(1)
+            ->andWhere($queryBuilder->expr()->isNull('alias_chain_data.right'))
+            ->andWhere($queryBuilder->expr()->isNotNull('alias_chain_data.left'))
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * @param UniqueIdentifiers $uniqueIdentifiers
+     * @return ChainData|null
+     * @throws NonUniqueResultException
+     */
+    public function getFirstElementByIdentity(UniqueIdentifiers $uniqueIdentifiers)
+    {
+        $queryBuilder = $this->createQueryBuilder('alias_chain_data');
+        return $queryBuilder
+            ->where('alias_chain_data.uniqueIdentifiers = :uniqueIdentifiers')
+            ->setParameters([
+                'uniqueIdentifiers' => $uniqueIdentifiers,
+            ])
+            ->andWhere($queryBuilder->expr()->isNull('alias_chain_data.left'))
+            ->andWhere($queryBuilder->expr()->isNotNull('alias_chain_data.right'))
             ->getQuery()
             ->getOneOrNullResult();
     }
