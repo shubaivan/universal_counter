@@ -102,14 +102,14 @@ class ChainDataService
         $csv->setEnclosure('\'');
 
         foreach ($csv as $record) {
-            $currentCondition = ($record['Current'] && ($record['Current'] == 'true'
+            $currentCondition = (isset($record['Current']) && ($record['Current'] == 'true'
                     || $record['Current'] == '1'))
                 ? true : false;
 
             $chainData = $this->preCreateNewElement(
                 $uniqueIdentifiers,
                 [
-                    'chainDataName' => $record['Name'],
+                    'chainDataName' => isset($record['Name']) ?? '',
                     'carriage' => $currentCondition,
                 ],
                 $direction

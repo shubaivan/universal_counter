@@ -54,7 +54,7 @@ class ChainData implements EntityValidatorException
     private $id;
 
     /**
-     * @ORM\Column(type="string", length=255, nullable=false, unique=true)
+     * @ORM\Column(type="string", length=255, nullable=false)
      * @Annotation\Groups({
      *     ChainData::SERIALIZED_GROUP_POST, ChainData::SERIALIZED_GROUP_GET_ONE
      * })
