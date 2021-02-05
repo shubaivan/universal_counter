@@ -109,7 +109,7 @@ class ChainDataService
             $chainData = $this->preCreateNewElement(
                 $uniqueIdentifiers,
                 [
-                    'chainDataName' => isset($record['Name']) ?? '',
+                    'chainDataName' => $record['Name'] ?? '',
                     'carriage' => $currentCondition,
                 ],
                 $direction
@@ -173,7 +173,9 @@ class ChainDataService
     /**
      * @param UniqueIdentifiers $uniqueIdentifiers
      * @param array $dataProperties
+     * @param int|null $direction
      * @return ChainData
+     * @throws NonUniqueResultException
      * @throws ValidatorException
      */
     private function preCreateNewElement(
@@ -227,7 +229,7 @@ class ChainDataService
                 }
                 break;
             default:
-                throw new BadRequestHttpException('unexpected value, available enum - '
+                throw new BadRequestHttpException('unexpected direction value, available enum - '
                     . implode(',', ChainConfiguration::getEnumDirection()));
         }
     }

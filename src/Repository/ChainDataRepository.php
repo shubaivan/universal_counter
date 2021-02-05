@@ -67,13 +67,31 @@ class ChainDataRepository extends AbstractRepository
     public function getFirstElementByIdentity(UniqueIdentifiers $uniqueIdentifiers)
     {
         $queryBuilder = $this->createQueryBuilder('alias_chain_data');
-        return $queryBuilder
+        $queryBuilder
             ->where('alias_chain_data.uniqueIdentifiers = :uniqueIdentifiers')
             ->setParameters([
                 'uniqueIdentifiers' => $uniqueIdentifiers,
-            ])
-            ->andWhere($queryBuilder->expr()->isNull('alias_chain_data.left'))
-            ->andWhere($queryBuilder->expr()->isNotNull('alias_chain_data.right'))
+            ]);
+
+        $orx = $queryBuilder->expr()->orX();
+        $andx = $queryBuilder->expr()->andX();
+
+        $andx
+            ->add($queryBuilder->expr()->isNull('alias_chain_data.left'))
+            ->add($queryBuilder->expr()->isNotNull('alias_chain_data.right'));
+
+        $andxNull = $queryBuilder->expr()->andX();
+
+        $andxNull
+            ->add($queryBuilder->expr()->isNull('alias_chain_data.left'))
+            ->add($queryBuilder->expr()->isNull('alias_chain_data.right'));
+
+        $orx->add($andx)->add($andxNull);
+
+        $queryBuilder
+            ->andWhere($orx);
+
+        return $queryBuilder
             ->getQuery()
             ->getOneOrNullResult();
     }
