@@ -88,7 +88,6 @@ class ChainConfiguration implements EntityValidatorException
      * @Annotation\Accessor(setter="setDirectionAccessor")
      * @SWG\Property(description="chain direction up or down.", default="up(1)")
      * @Assert\NotBlank(groups={ChainConfiguration::SERIALIZED_GROUP_POST})
-     * @Assert\NotEqualTo(value="0", groups={ChainConfiguration::SERIALIZED_GROUP_POST})
      */
     private $direction = 1;
 

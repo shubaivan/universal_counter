@@ -11,6 +11,7 @@ use Doctrine\ORM\Mapping\UniqueConstraint;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use JMS\Serializer\Annotation;
 use Symfony\Component\HttpFoundation\Exception\BadRequestException;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Validator\Constraints as Assert;
 use OpenApi\Annotations as SWG;
 
@@ -183,32 +184,35 @@ class ChainData implements EntityValidatorException
     {
         $this->setCarriage(false);
         $chainConfiguration = $this->getUniqueIdentifiers()->getChainConfiguration();
-        if ($chainConfiguration) {
-            $model = null;
-            switch ($chainConfiguration->getDirection()) {
-                case ChainConfiguration::DIRECTION_UP:
-                    if (!$this->getRight()) {
-                        throw new BadRequestException('in this direction ' . ChainConfiguration::DIRECTION_UP
-                            . ' item was ended');
-                    }
-                    $this->getRight()->setCarriage(true);
-                    $this->setCarriage(false);
-                    $model = $this->getRight();
-                    break;
-                case ChainConfiguration::DIRECTION_DOWN:
-                    if (!$this->getLeft()) {
-                        throw new BadRequestException('in this direction ' . ChainConfiguration::DIRECTION_DOWN
-                            . ' item was ended');
-                    }
-                    $this->getLeft()->setCarriage(true);
-                    $this->setCarriage(false);
-                    $model = $this->getLeft();
-                    break;
-                default:
-                    break;
-            }
-            return $model;
+        if (!$chainConfiguration) {
+            throw new BadRequestException('configuration should be loaded');
         }
+        $model = null;
+        switch ($chainConfiguration->getDirection()) {
+            case ChainConfiguration::DIRECTION_UP:
+                if (!$this->getRight()) {
+                    throw new BadRequestException('in this direction ' . ChainConfiguration::DIRECTION_UP
+                        . ' item was ended');
+                }
+                $this->getRight()->setCarriage(true);
+                $this->setCarriage(false);
+                $model = $this->getRight();
+                break;
+            case ChainConfiguration::DIRECTION_DOWN:
+                if (!$this->getLeft()) {
+                    throw new BadRequestException('in this direction ' . ChainConfiguration::DIRECTION_DOWN
+                        . ' item was ended');
+                }
+                $this->getLeft()->setCarriage(true);
+                $this->setCarriage(false);
+                $model = $this->getLeft();
+                break;
+            default:
+                throw new BadRequestHttpException('unexpected value, available enum - '
+                    . implode(',', ChainConfiguration::getEnumDirection()));
+                break;
+        }
+        return $model;
     }
 
     /**

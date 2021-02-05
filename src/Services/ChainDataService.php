@@ -206,7 +206,7 @@ class ChainDataService
                 ChainData::class,
                 [ChainData::SERIALIZED_GROUP_POST]
             );
-        $this->executeDirection($direction, $uniqueIdentifiers, $handleObject);
+        $this->executeDirectionRelation($direction, $uniqueIdentifiers, $handleObject);
         $this->objectsHandler->validateEntity($handleObject, [ChainData::VALIDATION_GROUP_RELATION]);
 
         return $handleObject;
@@ -218,7 +218,7 @@ class ChainDataService
      * @param ChainData $chainData
      * @throws NonUniqueResultException
      */
-    private function executeDirection(
+    private function executeDirectionRelation(
         int $direction,
         UniqueIdentifiers $uniqueIdentifiers,
         ChainData $chainData
@@ -294,6 +294,9 @@ class ChainDataService
     private function getLastElByDirection(UniqueIdentifiers $uniqueIdentifiers)
     {
         $chainConfiguration = $uniqueIdentifiers->getChainConfiguration();
+        if (!$chainConfiguration) {
+            throw new BadRequestException('configuration should be loaded');
+        }
         switch ($chainConfiguration->getDirection()) {
             case ChainConfiguration::DIRECTION_UP:
                 $itemToCompare = $this->chainDataRepository->getLastElementByIdentity($uniqueIdentifiers);
