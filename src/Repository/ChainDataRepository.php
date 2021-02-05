@@ -5,8 +5,10 @@ namespace App\Repository;
 use App\Entity\ChainData;
 use App\Entity\UniqueIdentifiers;
 use Doctrine\Common\Collections\Criteria;
+use Doctrine\DBAL\Exception;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\Persistence\ManagerRegistry;
+use PDO;
 
 /**
  * @method ChainData|null find($id, $lockMode = null, $lockVersion = null)
@@ -94,5 +96,42 @@ class ChainDataRepository extends AbstractRepository
         return $queryBuilder
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    /**
+     * @return mixed
+     * @throws Exception
+     */
+    public function fetchChainElemetns(UniqueIdentifiers $uniqueIdentifiers)
+    {
+        $connection = $this->getEntityManager()->getConnection();
+
+        $query = '
+        WITH RECURSIVE chain AS (
+            SELECT id, chain_data_name, carriage, left_id, right_id
+            FROM chain_data
+            WHERE left_id IS NULL
+            AND unique_identifiers_id = :unique_identifiers_id
+        
+            UNION
+        
+            SELECT cd.id, cd.chain_data_name, cd.carriage, cd.left_id, cd.right_id
+            FROM chain_data cd
+                     JOIN chain c ON c.right_id = cd.id
+                     WHERE cd.unique_identifiers_id = :unique_identifiers_id
+        )
+        SELECT
+            *
+        FROM
+            chain
+        ';
+
+        $resultStatement = $connection->executeQuery(
+            $query,
+            [':unique_identifiers_id' => $uniqueIdentifiers->getId()],
+            [':unique_identifiers_id' => PDO::PARAM_INT]
+        );
+
+        return $resultStatement->fetchAllAssociative();
     }
 }

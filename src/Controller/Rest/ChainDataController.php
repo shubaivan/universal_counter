@@ -69,14 +69,52 @@ class ChainDataController extends AbstractRestController
     }
 
     /**
-     * post ChainConfiguration.
+     * get all chain data by uniq identifier.
+     *
+     * @Rest\Get("/api/all/chain-data/{uuid}")
+     *
+     * @Rest\View(statusCode=Response::HTTP_OK)
+     *
+     * @Operation(
+     *     tags={"ChainData"},
+     *     summary="get all chain data by uniq identifier.",
+     *     @OA\Response(
+     *         response=200,
+     *         description="successful operation",
+     *         @OA\JsonContent(
+     *            type="array",
+     *                  @OA\Items(
+     *                      type="object",
+     *                      @OA\Property(property="id", type="integer"),
+     *                      @OA\Property(property="chain_data_name", type="string"),
+     *                      @OA\Property(property="left_id", type="integer"),
+     *                      @OA\Property(property="right_id", type="integer")
+     *                  )
+     *         )
+     *     ),
+     * )
+     *
+     * @ParamConverter("uniqueIdentifiers", options={"mapping": {"uuid": "requestHash"}})
+     *
+     * @param UniqueIdentifiers $uniqueIdentifiers
+     * @return ChainData
+     * @throws Exception
+     */
+    public function getAllChainData(
+        UniqueIdentifiers $uniqueIdentifiers
+    )
+    {
+        return $this->chainDataService->fetchAllChainData($uniqueIdentifiers);
+    }
+
+    /**
+     * post csv file with exist conf.
      *
      * @Rest\Post("/api/upload-file/{uuid}")
      *
-     * @Rest\View(serializerGroups={ChainConfiguration::SERIALIZED_GROUP_GET_ONE},
-     *      statusCode=Response::HTTP_OK
-     *     )
+     * @Rest\View(statusCode=Response::HTTP_OK)
      *
+     * @OA\Tag(name="ChainData")
      * @OA\RequestBody(
      *         @OA\MediaType(
      *             mediaType="multipart/form-data",

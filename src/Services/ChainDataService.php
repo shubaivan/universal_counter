@@ -71,6 +71,16 @@ class ChainDataService
 
     /**
      * @param UniqueIdentifiers $uniqueIdentifiers
+     * @return mixed
+     * @throws \Doctrine\DBAL\Exception
+     */
+    public function fetchAllChainData(UniqueIdentifiers $uniqueIdentifiers)
+    {
+        return $this->chainDataRepository->fetchChainElemetns($uniqueIdentifiers);
+    }
+
+    /**
+     * @param UniqueIdentifiers $uniqueIdentifiers
      * @return ChainData|null
      * @throws NonUniqueResultException
      */
