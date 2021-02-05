@@ -63,10 +63,16 @@ class ChainDataService
             return $this->createNewElementByConf($uniqueIdentifiers);
         }
         $chainData = $this->getCurrentDataFromChain($uniqueIdentifiers);
-        $current = $chainData->move();
-        $this->entityManager->flush();
-
-        return $current;
+        if ($chainData) {
+            $current = $chainData->move();
+            $this->entityManager->flush();
+            return $current;
+        }
+        if ($uniqueIdentifiers->getChainData()->count()) {
+            $current = $this->firstMoveInChain($uniqueIdentifiers);
+            $this->entityManager->flush();
+            return $current;
+        }
     }
 
     /**
@@ -110,12 +116,10 @@ class ChainDataService
         $csv->setDelimiter(',');
         $csv->setEscape('"');
         $csv->setEnclosure('\'');
-
-        foreach ($csv as $record) {
+        foreach ($csv as $key => $record) {
             $currentCondition = (isset($record['Current']) && ($record['Current'] == 'true'
                     || $record['Current'] == '1'))
                 ? true : false;
-
             $chainData = $this->preCreateNewElement(
                 $uniqueIdentifiers,
                 [
@@ -124,8 +128,8 @@ class ChainDataService
                 ],
                 $direction
             );
-            if ($currentCondition && $this->getCurrentDataFromChain($uniqueIdentifiers)) {
-                throw new BadRequestException('could be only one current element');
+            if ($currentCondition) {
+                $this->disableCurrentElemntInChain($uniqueIdentifiers);
             }
             $this->chainDataRepository->save($chainData);
         }
@@ -139,9 +143,9 @@ class ChainDataService
     private function lastElementIsCurrent(UniqueIdentifiers $uniqueIdentifiers)
     {
         $carriageChainData = $this->chainDataRepository->getCarriageElementByIdentity($uniqueIdentifiers);
-        $lastChainData = $this->chainDataRepository->getLastElementByIdentity($uniqueIdentifiers);
+        $itemToCompare = $this->getLastElByDirection($uniqueIdentifiers);
 
-        return ($lastChainData && $carriageChainData) ? $carriageChainData->getId() === $lastChainData->getId() : false;
+        return ($itemToCompare && $carriageChainData) ? $carriageChainData->getId() === $itemToCompare->getId() : false;
     }
 
     /**
@@ -165,10 +169,7 @@ class ChainDataService
     {
         try {
             $this->entityManager->beginTransaction();
-            if ($uniqueIdentifiers->getChainData()->count()) {
-                $this->updateCarriageChainData($uniqueIdentifiers);
-                $this->entityManager->flush();
-            }
+            $this->disableCurrentElemntInChain($uniqueIdentifiers);
             $chainData = $this->preCreateNewElement($uniqueIdentifiers);
             $this->chainDataRepository->save($chainData);
             $this->entityManager->commit();
@@ -197,7 +198,7 @@ class ChainDataService
         !is_null($direction) ?: $direction = ChainConfiguration::getEnumDirection()[ChainConfiguration::DIRECTION_UP];
         /** @var ChainData $handleObject */
         $handleObject = $this->objectsHandler
-            ->handleObject(($dataProperties ??
+            ->handleObject((count($dataProperties) ? $dataProperties :
                 [
                     'chainDataName' => $this->generateChainDataName($uniqueIdentifiers),
                     'carriage' => true,
@@ -256,15 +257,67 @@ class ChainDataService
         }
     }
 
+    /**
+     * @param UniqueIdentifiers $uniqueIdentifiers
+     * @return string
+     * @throws NonUniqueResultException
+     */
     private function generateChainDataName(UniqueIdentifiers $uniqueIdentifiers)
     {
         $chainConfiguration = $uniqueIdentifiers->getChainConfiguration();
         $identity = $chainConfiguration->getIncrement();
         /** @var ChainData $last */
-        $last = $uniqueIdentifiers->getChainData()->last();
+        $last = $this->getLastElByDirection($uniqueIdentifiers);
         if ($last && preg_match('([^_]+$)', $last->getChainDataName(), $m)) {
-            $identity = array_shift($m) + $identity;
+            $identity = (int)array_shift($m) + $identity;
         }
         return $chainConfiguration->getChainMainName() . '_' . $identity;
+    }
+
+    /**
+     * @param UniqueIdentifiers $uniqueIdentifiers
+     * @throws NonUniqueResultException
+     */
+    private function disableCurrentElemntInChain(UniqueIdentifiers $uniqueIdentifiers): void
+    {
+        if ($uniqueIdentifiers->getChainData()->count()) {
+            $this->updateCarriageChainData($uniqueIdentifiers);
+            $this->entityManager->flush();
+        }
+    }
+
+    /**
+     * @param UniqueIdentifiers $uniqueIdentifiers
+     * @return ChainData|null
+     * @throws NonUniqueResultException
+     */
+    private function getLastElByDirection(UniqueIdentifiers $uniqueIdentifiers)
+    {
+        $chainConfiguration = $uniqueIdentifiers->getChainConfiguration();
+        switch ($chainConfiguration->getDirection()) {
+            case ChainConfiguration::DIRECTION_UP:
+                $itemToCompare = $this->chainDataRepository->getLastElementByIdentity($uniqueIdentifiers);
+                break;
+            case ChainConfiguration::DIRECTION_DOWN:
+                $itemToCompare = $this->chainDataRepository->getFirstElementByIdentity($uniqueIdentifiers);
+                break;
+            default:
+                throw new BadRequestException('should be item on chain');
+                break;
+        }
+
+        return $itemToCompare;
+    }
+
+    /**
+     * @param UniqueIdentifiers $uniqueIdentifiers
+     * @return ChainData|null
+     * @throws NonUniqueResultException
+     */
+    private function firstMoveInChain(UniqueIdentifiers $uniqueIdentifiers)
+    {
+        $chainData = $this->getLastElByDirection($uniqueIdentifiers);
+        $chainData->setCarriage(true);
+        return $chainData;
     }
 }
