@@ -36,7 +36,7 @@ class ChainDataController extends AbstractRestController
     }
 
     /**
-     * get chain data by uniq identifier.
+     * get next chain data by uniq identifier configuration direction.
      *
      * @Rest\Get("/api/chain-data/{uuid}")
      *
@@ -44,7 +44,7 @@ class ChainDataController extends AbstractRestController
      *
      * @Operation(
      *     tags={"ChainData"},
-     *     summary="get chain data by uniq identifier.",
+     *     summary="get next chain data by uniq identifier configuration direction.",
      *     @OA\Response(
      *         response=200,
      *         description="Json object ChainData",
@@ -61,7 +61,7 @@ class ChainDataController extends AbstractRestController
      * @return ChainData
      * @throws Exception
      */
-    public function getChainData(
+    public function getChainDataAction(
         UniqueIdentifiers $uniqueIdentifiers
     )
     {

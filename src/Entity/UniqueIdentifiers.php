@@ -11,6 +11,7 @@ use Doctrine\ORM\Mapping\UniqueConstraint;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use JMS\Serializer\Annotation;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Component\Uid\UuidV4;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -99,6 +100,9 @@ class UniqueIdentifiers
         return $this->id;
     }
 
+    /**
+     * @return UuidV4
+     */
     public function getRequestHash()
     {
         return $this->requestHash;
