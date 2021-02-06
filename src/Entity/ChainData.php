@@ -182,6 +182,9 @@ class ChainData implements EntityValidatorException
      */
     public function move()
     {
+        if (!$this->getCarriage()) {
+            throw new BadRequestException('this is not carraige elemtn');
+        }
         $this->setCarriage(false);
         $chainConfiguration = $this->getUniqueIdentifiers()->getChainConfiguration();
         if (!$chainConfiguration) {

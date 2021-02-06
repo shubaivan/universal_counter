@@ -70,7 +70,7 @@ class UniqueIdentifiers
      *
      * @ORM\OneToOne(targetEntity="ChainConfiguration",
      *      inversedBy="uniqueIdentifier",
-     *      cascade={"remove"},
+     *      cascade={"persist", "remove"},
      *      orphanRemoval=true
      * )
      */
