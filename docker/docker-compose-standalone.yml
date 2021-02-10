@@ -12,7 +12,7 @@ services:
     depends_on:
       - db
     networks:
-      - application
+      - php
       - db
 
   db:
@@ -33,9 +33,20 @@ services:
     networks:
       - db
 
+  nginx:
+    container_name: nginx
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - php
+    networks:
+      - php
+    volumes:
+      - ./logs/nginx:/var/log/nginx:cached
+      - ../:/var/www/symfony:cached
+
 networks:
   db:
-  application:
-    external:
-      name: application
+  php:
 
