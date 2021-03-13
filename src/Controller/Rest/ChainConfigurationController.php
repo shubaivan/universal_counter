@@ -78,7 +78,7 @@ class ChainConfigurationController extends AbstractRestController
      * )
      *
      * @ParamConverter("uniqueIdentifiers", options={"mapping": {"uuid": "requestHash"}})
-     * @return ChainConfiguration|View
+     * @return ChainConfiguration|View|ConstraintViolationListInterface
      *
      * @throws ORMException
      * @throws OptimisticLockException
@@ -89,23 +89,11 @@ class ChainConfigurationController extends AbstractRestController
         ConstraintViolationListInterface $validationErrors
     )
     {
-        try {
-            if (count($validationErrors) > 0) {
-                throw new ValidatorException(
-                    $validationErrors,
-                    $chainConfiguration
-                );
-            }
-            $this->chainConfigurationService
-                ->createChainConfiguration($chainConfiguration, $uniqueIdentifiers);
-        } catch (ValidatorException $e) {
-            return $this->createResponse(
-                $e->getConstraintViolatinosList(),
-                Response::HTTP_BAD_REQUEST
-            );
-        } catch (Exception $e) {
-            throw new $e;
+        if (count($validationErrors) > 0) {
+            return $validationErrors;
         }
+        $this->chainConfigurationService
+            ->createChainConfiguration($chainConfiguration, $uniqueIdentifiers);
 
         return $chainConfiguration;
     }
